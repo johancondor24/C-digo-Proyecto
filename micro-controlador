@@ -1,0 +1,1658 @@
+;********************************************************************
+	LIST 	P=16F877A
+
+	INCLUDE	<P16F877A.INC>
+	
+	__CONFIG 0x3F31
+;********************************************************************
+;*  REGISTROS GENERALES DE LA MEMORIA RAM,;;
+ 
+OVFLW     EQU      	0x20
+CNTSEG    EQU      	0x21		; CONTADOR DE SEGUNDOS
+TEMP      EQU      	0x22
+CNT_C     EQU      	0x23		; CONTADOR DE CARACTERES
+CNT_M     EQU      	0x24		; CONTADOR DE MULTIPLICACION
+CNT_A	EQU      	0x25		; CONTADOR DE A/D
+CHAR	EQU	0x26
+RM3	EQU	0x27
+RM2	EQU	0x28
+RM1	EQU	0x29
+MULT1	EQU	0x2A
+MULT2	EQU	0x2B
+MULT3	EQU	0x2C
+DMIL	EQU	0x2D
+MIL	EQU	0x2E
+CENT	EQU	0x2F
+DEC	EQU	0x30
+UNID	EQU	0x31
+CNT_LCD	EQU	0X32
+
+R_ContA EQU 0X40
+R_ContB EQU 0X41
+R_ContC EQU 0X42
+R_ContD EQU 0X43
+
+;********************************************************************
+;*  SE DEFINEN FLAGS DE PORTD
+;********************************************************************
+
+dat0	EQU	4		; D4 LCD
+dat1	EQU	5		; D5 LCD
+dat2	EQU	6		; D6 LCD
+dat3	EQU	7		; D7 LCD
+
+;********************************************************************
+;*  INICIALIZA VECTOR DE RESET
+;********************************************************************
+
+	ORG	0x000		; VECTOR DE RESET
+
+	goto      inicio		; SALTA A PROGRAMA PRINCIPAL
+
+;********************************************************************
+;*  RUTINAS
+
+
+;********************************************************************
+;*  RUTINA DE RETARDOS          
+;********************************************************************
+;**************************** Librería "RETARDOS.INC" *********************************
+
+Retardo_10micros				; La llamada "call" aporta 2 ciclos máquina.
+	nop				; Aporta 1 ciclo máquina.
+	nop				; Aporta 1 ciclo máquina.
+	nop				; Aporta 1 ciclo máquina.
+	nop				; Aporta 1 ciclo máquina.
+	nop				; Aporta 1 ciclo máquina.
+Retardo_5micros				; La llamada "call" aporta 2 ciclos máquina.
+	nop				; Aporta 1 ciclo máquina.
+Retardo_4micros				; La llamada "call" aporta 2 ciclos máquina.
+	return				; El salto del retorno aporta 2 ciclos máquina.
+;
+; RETARDOS de 20 hasta 500 microsegundos ------------------------------------------------
+;
+Retardo_500micros				; La llamada "call" aporta 2 ciclos máquina.
+	nop				; Aporta 1 ciclo máquina.
+	movlw	d'164'			; Aporta 1 ciclo máquina. Este es el valor de "K".
+	goto	RetardoMicros		; Aporta 2 ciclos máquina.
+Retardo_200micros				; La llamada "call" aporta 2 ciclos máquina.
+	nop				; Aporta 1 ciclo máquina.
+	movlw	d'64'			; Aporta 1 ciclo máquina. Este es el valor de "K".
+	goto	RetardoMicros		; Aporta 2 ciclos máquina.
+Retardo_100micros				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'31'			; Aporta 1 ciclo máquina. Este es el valor de "K".
+	goto	RetardoMicros		; Aporta 2 ciclos máquina.
+Retardo_50micros				; La llamada "call" aporta 2 ciclos máquina.
+	nop				; Aporta 1 ciclo máquina.
+	movlw	d'14'			; Aporta 1 ciclo máquina. Este es el valor de "K".
+	goto	RetardoMicros		; Aporta 2 ciclos máquina.
+Retardo_20micros				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'5'			; Aporta 1 ciclo máquina. Este es el valor de "K".
+;
+; El próximo bloque "RetardoMicros" tarda:
+; 1 + (K-1) + 2 + (K-1)x2 + 2 = (2 + 3K) ciclos máquina.
+;
+RetardoMicros
+	movwf	R_ContA			; Aporta 1 ciclo máquina.
+Rmicros_Bucle
+	decfsz	R_ContA,F		; (K-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+	goto	Rmicros_Bucle		; Aporta (K-1)x2 ciclos máquina.
+	return				; El salto del retorno aporta 2 ciclos máquina.
+
+; RETARDOS de 1 ms hasta 200 ms. --------------------------------------------------------
+;
+Retardo_200ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'200'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_100ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'100'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_50ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'50'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_20ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'20'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_10ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'10'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_5ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'5'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_2ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'2'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+	goto	Retardos_ms		; Aporta 2 ciclos máquina.
+Retardo_1ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'1'			; Aporta 1 ciclo máquina. Este es el valor de "M".
+;
+; El próximo bloque "Retardos_ms" tarda:
+; 1 + M + M + KxM + (K-1)xM + Mx2 + (K-1)Mx2 + (M-1) + 2 + (M-1)x2 + 2 =
+; = (2 + 4M + 4KM) ciclos máquina. Para K=249 y M=1 supone 1002 ciclos máquina
+; que a 4 MHz son 1002 µs = 1 ms.
+;
+Retardos_ms
+	movwf	R_ContB			; Aporta 1 ciclo máquina.
+R1ms_BucleExterno
+	movlw	d'249'			; Aporta Mx1 ciclos máquina. Este es el valor de "K".
+	movwf	R_ContA			; Aporta Mx1 ciclos máquina.
+R1ms_BucleInterno
+	nop				; Aporta KxMx1 ciclos máquina.
+	decfsz	R_ContA,F		; (K-1)xMx1 cm (cuando no salta) + Mx2 cm (al saltar).
+	goto	R1ms_BucleInterno		; Aporta (K-1)xMx2 ciclos máquina.
+	decfsz	R_ContB,F		; (M-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+	goto	R1ms_BucleExterno 	; Aporta (M-1)x2 ciclos máquina.
+	return				; El salto del retorno aporta 2 ciclos máquina.
+
+; RETARDOS de 0.5 hasta 20 segundos ---------------------------------------------------
+;
+Retardo_20s				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'200'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+	goto	Retardo_1Decima		; Aporta 2 ciclos máquina.
+Retardo_10s				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'100'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+	goto	Retardo_1Decima		; Aporta 2 ciclos máquina.
+Retardo_5s				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'50'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+	goto	Retardo_1Decima		; Aporta 2 ciclos máquina.
+Retardo_2s				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'20'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+	goto	Retardo_1Decima		; Aporta 2 ciclos máquina.
+Retardo_1s				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'10'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+	goto	Retardo_1Decima		; Aporta 2 ciclos máquina.
+Retardo_500ms				; La llamada "call" aporta 2 ciclos máquina.
+	movlw	d'5'			; Aporta 1 ciclo máquina. Este es el valor de "N".
+;
+; El próximo bloque "Retardo_1Decima" tarda:
+; 1 + N + N + MxN + MxN + KxMxN + (K-1)xMxN + MxNx2 + (K-1)xMxNx2 +
+;   + (M-1)xN + Nx2 + (M-1)xNx2 + (N-1) + 2 + (N-1)x2 + 2 =
+; = (2 + 4M + 4MN + 4KM) ciclos máquina. Para K=249, M=100 y N=1 supone 100011
+; ciclos máquina que a 4 MHz son 100011 µs = 100 ms = 0,1 s = 1 décima de segundo.
+;
+Retardo_1Decima
+	movwf	R_ContC			; Aporta 1 ciclo máquina.
+R1Decima_BucleExterno2
+	movlw	d'100'			; Aporta Nx1 ciclos máquina. Este es el valor de "M".
+	movwf	R_ContB			; Aporta Nx1 ciclos máquina.
+R1Decima_BucleExterno
+	movlw	d'249'			; Aporta MxNx1 ciclos máquina. Este es el valor de "K".
+	movwf	R_ContA			; Aporta MxNx1 ciclos máquina.
+R1Decima_BucleInterno          
+	nop				; Aporta KxMxNx1 ciclos máquina.
+	decfsz	R_ContA,F		; (K-1)xMxNx1 cm (si no salta) + MxNx2 cm (al saltar).
+	goto	R1Decima_BucleInterno	; Aporta (K-1)xMxNx2 ciclos máquina.
+	decfsz	R_ContB,F		; (M-1)xNx1 cm (cuando no salta) + Nx2 cm (al saltar).
+	goto	R1Decima_BucleExterno	; Aporta (M-1)xNx2 ciclos máquina.
+	decfsz	R_ContC,F		; (N-1)x1 cm (cuando no salta) + 2 cm (al saltar).
+	goto	R1Decima_BucleExterno2	; Aporta (N-1)x2 ciclos máquina.
+	return				; El salto del retorno aporta 2 ciclos máquina.
+
+;********************    PROGRAMA PRINCIPAL    **********************
+;********************************************************************
+
+inicio    bsf       STATUS,RP0	; BANK 1
+
+	movlw	B'00000000'
+	movwf	TRISB		; CONFIGURA PORT B 
+	movlw	B'00000000'
+	movwf	TRISC		; CONFIGURA PORT C 
+	movlw	B'00001111'
+	movwf	TRISD		; CONFIGURA PORT D 
+	movlw     B'00000111'		
+	movwf	OPTION_REG	; CONFIGURA TMR0		 
+
+	movlw	.103		; Para 2400 Baudios
+	movwf	SPBRG		; Fosc/(16(X+1))
+	movlw	B'00000110'	; X=SPBRG, FOSC= 4.00 MHz.
+	movwf	TXSTA		; MODO ASINCRONO, HIGH SPEED
+
+	movlw	B'10000100'
+	movwf	ADCON1		; CONFIGURA A/D
+
+	bcf	STATUS,RP0	; BANK 0
+
+	movlw	B'1000000'	
+	movwf	ADCON0		; CONFIGURA A/D
+
+;	bsf	RCSTA,SPEN	; Enable (RC7/RX y RC6/TX)	
+
+
+	clrf	PORTB		; todos los condensadores apagados
+	clrf	PORTC
+	clrf	PORTD
+
+
+hexagono
+
+;###############
+
+	clrf	PORTB
+
+	btfss	PORTD,0
+	goto	hexagono1
+	
+	bsf	PORTC,0
+	bcf	PORTC,1
+	bcf	PORTC,2
+	bcf	PORTC,3
+	bcf	PORTC,4
+	bcf	PORTC,5
+
+	goto	hexagono	
+
+hexagono1
+
+;%%%%%%%%%%%%%%%  (59.952 hz)  
+;	clrf	PORTB
+
+	btfss	PORTD,2
+	goto	hexagono
+
+	btfss	PORTD,1
+	goto	hexagono2
+	
+	bcf	PORTC,0
+	bsf	PORTC,1
+	bcf	PORTC,2
+	bcf	PORTC,3
+	bcf	PORTC,4
+	bcf	PORTC,5
+
+;%%%%%%%%%%%%%%%
+; *************************  velocidad 1 10hz 36.6 vac
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,4
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+					
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+	call	Retardo_500micros
+	call	Retardo_500micros					
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms				
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bcf	PORTB,0
+	call	Retardo_100micros
+	call	Retardo_500micros
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+	call	Retardo_500micros
+	call	Retardo_500micros						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+ 	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+				
+
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+					
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,1
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+		
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_5ms
+					
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+
+	bcf	PORTB,3
+
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+				
+	goto	hexagono1				
+hexagono2
+
+
+	btfss	PORTD,3
+	goto	hexagono1
+
+	btfss	PORTD,0
+	goto	hexagono3
+	
+	bcf	PORTC,0
+	bcf	PORTC,1
+	bsf	PORTC,2
+	bcf	PORTC,3
+	bcf	PORTC,4
+	bcf	PORTC,5
+
+;%%%%%%%%%%%%%%%   15 hz 55vac velocidad 2
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+					
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+					
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+				
+	bcf	PORTB,4
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+				
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+;************************
+
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,1
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+	call	Retardo_2ms
+	call	Retardo_200micros
+					
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+
+	bcf	PORTB,3
+
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+	
+
+						
+	goto	hexagono2				
+hexagono3
+
+	btfss	PORTD,2
+	goto	hexagono2
+
+	btfss	PORTD,1
+	goto	hexagono4
+	
+	bcf	PORTC,0
+	bcf	PORTC,1
+	bcf	PORTC,2
+	bsf	PORTC,3
+	bcf	PORTC,4
+	bcf	PORTC,5
+
+;%%%%%%%%%%%%%%%    25 hz  91.66 vac velocidad 3
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,4
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+					
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+					
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bcf	PORTB,0
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,1
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+
+							
+            bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_200micros
+	call	Retardo_50micros
+	call	Retardo_2ms
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+
+	bcf	PORTB,3
+
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+	goto	hexagono3				
+hexagono4
+
+
+	btfss	PORTD,3
+	goto	hexagono3
+
+	btfss	PORTD,0
+	goto	hexagono5
+	
+	bcf	PORTC,0
+	bcf	PORTC,1
+	bcf	PORTC,2
+	bcf	PORTC,3
+	bsf	PORTC,4
+	bcf	PORTC,5
+
+
+;%    45 hz 165 vac --------------- velocidad 5
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros			
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros						
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_500micros					
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+	call	Retardo_100micros
+	call	Retardo_200micros						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+	call	Retardo_500micros
+	call	Retardo_500micros						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bcf	PORTB,4
+	call	Retardo_100micros
+	call	Retardo_500micros						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+;************************
+
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,1
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+					
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+						
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_200micros
+	call	Retardo_50micros
+						
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+	bcf	PORTB,3
+
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+
+						
+	goto	hexagono4			
+hexagono5
+
+
+	btfss	PORTD,2
+	goto	hexagono4
+
+
+	bcf	PORTC,0
+	bcf	PORTC,1
+	bcf	PORTC,2
+	bcf	PORTC,3
+	bcf	PORTC,4
+	bsf	PORTC,5
+
+;%%%%%%%%%%%%%%%    
+
+;%%%%%%%%%%%%%%%    60.1 hz -----------------
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,2
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,3
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+
+					
+	bcf	PORTB,0
+	bcf	PORTB,4
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+
+
+	bsf	PORTB,0
+	bsf	PORTB,4
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bcf	PORTB,4
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,0
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bsf	PORTB,0
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,0
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+	call	Retardo_500micros
+	call	Retardo_500micros
+						
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,5
+	call	Retardo_100micros
+	call	Retardo_200micros
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,5
+
+
+	call	Retardo_100micros
+	call	Retardo_200micros
+						
+	bcf	PORTB,5
+
+	call	Retardo_100micros
+	call	Retardo_500micros
+
+						
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+	call	Retardo_500micros
+	call	Retardo_500micros					
+	bcf	PORTB,3
+	bcf	PORTB,1
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bsf	PORTB,3
+	bsf	PORTB,1
+	bsf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros				
+	bcf	PORTB,1
+	call	Retardo_100micros
+	call	Retardo_500micros	
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,1
+	call	Retardo_100micros
+	call	Retardo_200micros
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+	call	Retardo_500micros
+	call	Retardo_500micros					
+	bcf	PORTB,3
+	bcf	PORTB,4
+	bcf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros					
+	bsf	PORTB,3
+	bsf	PORTB,4
+	bsf	PORTB,2
+	call	Retardo_100micros
+	call	Retardo_200micros			
+	bcf	PORTB,3
+	call	Retardo_100micros
+	call	Retardo_500micros
+			
+	goto	hexagono5				
+	
+	END			
